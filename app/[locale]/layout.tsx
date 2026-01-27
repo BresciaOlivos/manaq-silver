@@ -1,7 +1,8 @@
-import { SidebarNav } from "@/components/SidebarNav";
+
 import Link from "next/link";
-import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { AppProviders } from "@/components/AppProviders";
+import { SidebarNav } from "../../components/SidebarNav";
+import { LocaleSwitcher } from "../../components/LocaleSwitcher";
+import { AppProviders } from "../../components/AppProviders";
 
 const supported = ["de", "en"] as const;
 

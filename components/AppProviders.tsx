@@ -1,7 +1,7 @@
 "use client";
 
-import { CartProvider } from "@/components/CartProvider";
-import { ReservationJanitor } from "@/components/ReservationJanitor";
+import { CartProvider } from "./CartProvider";
+import { ReservationJanitor } from "./ReservationJanitor";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
