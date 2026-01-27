@@ -1,8 +1,7 @@
 import { SidebarNav } from "@/components/SidebarNav";
 import Link from "next/link";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { CartProvider } from "@/components/CartProvider";
-import { ReservationJanitor } from "@/components/ReservationJanitor";
+import { AppProviders } from "@/components/AppProviders";
 
 const supported = ["de", "en"] as const;
 
@@ -29,20 +28,20 @@ function labels(locale: string) {
   };
 }
 
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const locale = supported.includes(params.locale as any) ? params.locale : "en";
+  const { locale: rawLocale } = await params;
+  const locale = supported.includes(rawLocale as any) ? rawLocale : "en";
   const t = labels(locale);
 
   return (
-    <CartProvider>
-      <ReservationJanitor />
-
+    <AppProviders>
+      
       <div className="min-h-screen grid lg:grid-cols-[280px_1fr]">
         {/* Sidebar (desktop) */}
         <aside className="hidden lg:flex flex-col border-r bg-neutral-50">
@@ -134,7 +133,7 @@ export default function LocaleLayout({
           {children}
         </main>
       </div>
-    </CartProvider>
+    </AppProviders>
   );
 }
 

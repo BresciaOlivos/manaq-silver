@@ -20,11 +20,11 @@ export function ProductCard({
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-200 to-neutral-100" />
 
         {/* Reserved badge (future-ready) */}
-        {product.status === "reserved" && (
-          <div className="absolute top-3 left-3 rounded-full bg-neutral-900 px-3 py-1 text-xs text-white">
-            {locale === "de" ? "Reserviert" : "Reserved"}
-          </div>
-        )}
+        {("status" in product && (product as any).status === "reserved") && (
+  <div className="absolute top-3 left-3 rounded-full bg-neutral-900 px-3 py-1 text-xs text-white">
+    {locale === "de" ? "Reserviert" : "Reserved"}
+  </div>
+)}
       </div>
 
       {/* Text */}
