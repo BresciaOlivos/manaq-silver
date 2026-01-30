@@ -10,7 +10,7 @@ export default async function Home({
   const locale = rawLocale === "de" ? "de" : "en";
   const de = locale === "de";
 
-  const hero = "/images/hero/hero.PNG"; // IMPORTANT: matches your file name exactly
+  const hero = "/images/hero/hero.png"; // IMPORTANT: matches your file name exactly
 
   return (
     <div className="grid gap-10">
