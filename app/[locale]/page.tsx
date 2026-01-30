@@ -10,40 +10,46 @@ export default async function Home({
   const locale = rawLocale === "de" ? "de" : "en";
   const de = locale === "de";
 
+  const hero = "/images/hero/hero.PNG"; // IMPORTANT: matches your file name exactly
+
   return (
     <div className="grid gap-10">
+      {/* HERO */}
       <section className="relative overflow-hidden rounded-[28px] border bg-black text-white">
         {/* Background image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/hero/hero.jpg"
+            src={hero}
             alt="Manaq Silver"
             fill
             priority
-            className="object-cover"
+            className="object-cover object-center"
+            sizes="(max-width: 768px) 100vw, 1200px"
           />
-          {/* Luxury overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-black/80" />
+
+          {/* Luxury overlays */}
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black/85" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />
         </div>
 
+        {/* Content */}
         <div className="relative p-7 sm:p-10 md:p-14 grid gap-6 max-w-3xl">
-          <p className="text-[11px] tracking-[0.35em] uppercase text-white/70">
-            {de ? "950 Peruanisches Silber" : "950 Peruvian Silver"}
+          <p className="text-[11px] tracking-[0.38em] uppercase text-white/75">
+            {de ? "950 SILBER • HANDGEFERTIGT IN PERU" : "950 SILVER • HANDCRAFTED IN PERU"}
           </p>
 
-          <h1 className="text-4xl sm:text-5xl font-semibold leading-tight tracking-tight">
-            {de
-              ? "Peruanisches Silber, kuratiert in Europa."
-              : "Peruvian silver, curated in Europe."}
+          <h1 className="text-4xl sm:text-5xl font-semibold leading-[1.05] tracking-tight">
+            {de ? "Peruanisches Silber, kuratiert in Europa." : "Peruvian silver, curated in Europe."}
           </h1>
 
-          <p className="text-white/70 text-sm sm:text-base leading-relaxed">
+          <p className="text-white/75 text-sm sm:text-base leading-relaxed">
             {de
-              ? "Limitierte Stücke. 15 Minuten reservieren, sicher online bezahlen, Versand aus Deutschland."
-              : "Limited pieces. Reserve for 15 minutes, pay securely online, shipped from Germany."}
+              ? "Schmuck mit Bedeutung — inspiriert von den Anden, sorgfältig ausgewählt, aus Deutschland versendet."
+              : "Jewelry with meaning — inspired by the Andes, carefully curated, shipped from Germany."}
           </p>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 pt-1">
             <Link
               href={`/${locale}/earrings`}
               className="rounded-full bg-white text-neutral-900 px-5 py-2 text-sm font-medium hover:opacity-90"
@@ -55,7 +61,7 @@ export default async function Home({
               href={`/${locale}/about`}
               className="rounded-full border border-white/25 px-5 py-2 text-sm hover:bg-white/10"
             >
-              {de ? "Über Manaq" : "About Manaq"}
+              {de ? "Über Manaq" : "About"}
             </Link>
 
             <Link
@@ -66,16 +72,11 @@ export default async function Home({
             </Link>
           </div>
 
-          <div className="pt-4 grid gap-3">
-            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
-              {de ? "Versand aus Deutschland" : "Ships from Germany"}
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
-              {de ? "Limitierte Stücke" : "Limited pieces"}
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
-              {de ? "Sichere Kartenzahlung" : "Secure card payment"}
-            </div>
+          {/* Trust badges */}
+          <div className="pt-4 grid gap-3 sm:grid-cols-3">
+            <Badge title={de ? "Versand aus Deutschland" : "Ships from Germany"} />
+            <Badge title={de ? "Limitierte Stücke" : "Limited pieces"} />
+            <Badge title={de ? "Sichere Kartenzahlung" : "Secure card payment"} />
           </div>
         </div>
       </section>
@@ -138,13 +139,21 @@ export default async function Home({
 
 function Badge({ title }: { title: string }) {
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
+    <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90 backdrop-blur">
       {title}
     </div>
   );
 }
 
-function Cat({ locale, href, title }: { locale: string; href: string; title: string }) {
+function Cat({
+  locale,
+  href,
+  title,
+}: {
+  locale: string;
+  href: string;
+  title: string;
+}) {
   return (
     <Link
       href={`/${locale}/${href}`}
