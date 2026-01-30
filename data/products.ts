@@ -57,6 +57,27 @@ export const products: Product[] = [
   },
   image: "/placeholder.jpg",
 },
+{
+  id: "cereza",
+  category: "sets",
+  price: 50,
+  status: "available",
 
+  name: {
+    de: "Cereza",
+    en: "Cereza",
+  },
+
+  description: {
+    de: "Set aus Ohrringen und Anhänger aus 950 Silber.",
+    en: "Set with earrings and pendant made of 950 silver.",
+  },
+
+  images: [
+    "/images/sets/cereza/cereza1.png",
+    "/images/sets/cereza/cereza2.png",
+    "/images/sets/cereza/cereza3.png",
+  ],
+}
 
 ];
