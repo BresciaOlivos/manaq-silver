@@ -1,41 +1,34 @@
 import Link from "next/link";
-import { Hero } from "@/components/Hero";
 
-export default function Home({ params }: { params: { locale: string } }) {
-  const locale = params.locale === "de" ? "de" : "en";
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === "de" ? "de" : "en";
   const de = locale === "de";
 
   return (
     <div className="grid gap-10">
-      <Hero locale={locale} />
-      <section className="relative overflow-hidden rounded-[28px] border bg-black">
-        {/* Background image (desktop) */}
-        <div
-          className="hidden md:block absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url(/hero-desktop.jpg)" }}
-        />
-        {/* Background image (mobile) */}
-        <div
-          className="md:hidden absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url(/hero-mobile.jpg)" }}
-        />
+      {/* HERO */}
+      <section className="relative overflow-hidden rounded-[28px] border bg-neutral-950 text-white">
+        {/* soft glow */}
+        <div className="pointer-events-none absolute -top-28 -left-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
 
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/45" />
-
-        {/* Content */}
-        <div className="relative p-8 md:p-14 grid gap-6 max-w-3xl">
-          <p className="text-xs tracking-[0.35em] uppercase text-white/80">
+        <div className="relative p-7 sm:p-10 md:p-14 grid gap-6 max-w-3xl">
+          <p className="text-[11px] tracking-[0.35em] uppercase text-white/70">
             {de ? "950 Peruanisches Silber" : "950 Peruvian Silver"}
           </p>
 
-          <h1 className="text-4xl md:text-5xl font-semibold leading-tight text-white">
+          <h1 className="text-4xl sm:text-5xl font-semibold leading-tight tracking-tight">
             {de
               ? "Peruanisches Silber, kuratiert in Europa."
               : "Peruvian silver, curated in Europe."}
           </h1>
 
-          <p className="text-white/80">
+          <p className="text-white/70 text-sm sm:text-base leading-relaxed">
             {de
               ? "Limitierte Stücke. 15 Minuten reservieren, sicher online bezahlen, Versand aus Deutschland."
               : "Limited pieces. Reserve for 15 minutes, pay securely online, shipped from Germany."}
@@ -44,28 +37,28 @@ export default function Home({ params }: { params: { locale: string } }) {
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/${locale}/earrings`}
-              className="rounded-full bg-white text-black px-5 py-2 text-sm font-medium hover:bg-white/90 transition"
+              className="rounded-full bg-white text-neutral-900 px-5 py-2 text-sm font-medium hover:opacity-90"
             >
-              {de ? "Jetzt shoppen" : "Shop now"}
+              {de ? "Shop" : "Shop"}
             </Link>
 
             <Link
               href={`/${locale}/about`}
-              className="rounded-full border border-white/70 text-white px-5 py-2 text-sm font-medium hover:border-white transition"
+              className="rounded-full border border-white/25 px-5 py-2 text-sm hover:bg-white/10"
             >
               {de ? "Über Manaq" : "About Manaq"}
             </Link>
 
             <Link
               href={`/${locale}/contact`}
-              className="rounded-full border border-white/70 text-white px-5 py-2 text-sm font-medium hover:border-white transition"
+              className="rounded-full border border-white/25 px-5 py-2 text-sm hover:bg-white/10"
             >
               {de ? "Kontakt" : "Contact"}
             </Link>
           </div>
 
-          {/* Trust badges */}
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* TRUST ROW */}
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <Badge title={de ? "Versand aus Deutschland" : "Ships from Germany"} />
             <Badge title={de ? "Limitierte Stücke" : "Limited pieces"} />
             <Badge title={de ? "Sichere Kartenzahlung" : "Secure card payment"} />
@@ -86,13 +79,52 @@ export default function Home({ params }: { params: { locale: string } }) {
           <Cat locale={locale} href="about" title={de ? "Über uns" : "About"} />
         </div>
       </section>
+
+      {/* FEATURED PLACEHOLDERS */}
+      <section className="grid gap-4 pb-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-900">
+              {de ? "Highlights" : "Featured pieces"}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              {de ? "Kleine Auswahl — neue Drops regelmäßig." : "A small selection — new drops regularly."}
+            </p>
+          </div>
+
+          <Link
+            href={`/${locale}/earrings`}
+            className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors"
+          >
+            {de ? "Alle ansehen →" : "View all →"}
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="rounded-3xl border bg-white p-4 hover:bg-neutral-50 transition-colors"
+            >
+              <div className="aspect-[4/3] rounded-2xl bg-neutral-100 border" />
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm font-medium text-neutral-900">
+                  {de ? "Stückname" : "Piece name"}
+                </p>
+                <p className="text-sm text-neutral-700">€49</p>
+              </div>
+              <p className="mt-1 text-xs text-neutral-500">950 silver • Peru</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
 function Badge({ title }: { title: string }) {
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur">
+    <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
       {title}
     </div>
   );
@@ -104,10 +136,10 @@ function Cat({ locale, href, title }: { locale: string; href: string; title: str
       href={`/${locale}/${href}`}
       className="rounded-[22px] border bg-white p-6 hover:bg-neutral-50 transition"
     >
-      <div className="text-sm tracking-[0.25em] uppercase text-neutral-600">
+      <div className="text-[11px] tracking-[0.25em] uppercase text-neutral-500">
         Manaq
       </div>
-      <div className="mt-2 text-xl font-semibold">{title}</div>
+      <div className="mt-2 text-xl font-semibold text-neutral-900">{title}</div>
       <div className="mt-2 text-sm text-neutral-600">
         {locale === "de" ? "Entdecken →" : "Explore →"}
       </div>
