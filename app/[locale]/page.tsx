@@ -96,43 +96,71 @@ export default async function Home({
       </section>
 
       {/* FEATURED PLACEHOLDERS */}
-      <section className="grid gap-4 pb-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-900">
-              {de ? "Highlights" : "Featured pieces"}
-            </h2>
-            <p className="mt-1 text-sm text-neutral-600">
-              {de ? "Kleine Auswahl — neue Drops regelmäßig." : "A small selection — new drops regularly."}
-            </p>
-          </div>
+      {/* FEATURED */}
+<section className="grid gap-4 pb-6">
+  <div className="flex items-end justify-between gap-4">
+    <div>
+      <h2 className="text-lg font-semibold text-neutral-900">
+        {de ? "Highlights" : "Featured"}
+      </h2>
+      <p className="mt-1 text-sm text-neutral-600">
+        {de
+          ? "Kleine Auswahl — neue Drops regelmäßig."
+          : "A small selection — new drops regularly."}
+      </p>
+    </div>
 
-          <Link
-            href={`/${locale}/earrings`}
-            className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors"
-          >
-            {de ? "Alle ansehen →" : "View all →"}
-          </Link>
-        </div>
+    <Link
+      href={`/${locale}/sets`}
+      className="text-sm text-neutral-700 hover:text-neutral-900 transition-colors"
+    >
+      {de ? "Alle Sets →" : "All sets →"}
+    </Link>
+  </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="rounded-3xl border bg-white p-4 hover:bg-neutral-50 transition-colors"
-            >
-              <div className="aspect-[4/3] rounded-2xl bg-neutral-100 border" />
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm font-medium text-neutral-900">
-                  {de ? "Stückname" : "Piece name"}
-                </p>
-                <p className="text-sm text-neutral-700">€49</p>
-              </div>
-              <p className="mt-1 text-xs text-neutral-500">950 silver • Peru</p>
-            </div>
-          ))}
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {/* CEREZA FEATURE CARD */}
+    <Link
+      href={`/${locale}/sets#cereza`}
+      className="rounded-3xl border bg-white p-4 hover:bg-neutral-50 transition-colors"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-neutral-100 border">
+        <Image
+          src="/images/sets/cereza/cereza1.png"
+          alt="Cereza Set"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 500px"
+        />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-sm font-medium text-neutral-900">Cereza</p>
+        <p className="text-sm text-neutral-700">€50</p>
+      </div>
+
+      <p className="mt-1 text-xs text-neutral-500">
+        {de ? "Set: Ohrringe + Anhänger • 950 Silber" : "Set: earrings + pendant • 950 silver"}
+      </p>
+    </Link>
+
+    {/* Optional placeholders (we replace later with real products) */}
+    {Array.from({ length: 2 }).map((_, idx) => (
+      <div key={idx} className="rounded-3xl border bg-white p-4">
+        <div className="aspect-[4/3] rounded-2xl bg-neutral-100 border" />
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm font-medium text-neutral-900">
+            {de ? "Kommt bald" : "Coming soon"}
+          </p>
+          <p className="text-sm text-neutral-700">—</p>
         </div>
-      </section>
+        <p className="mt-1 text-xs text-neutral-500">
+          {de ? "Neue Drops" : "New drops"}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
     </div>
   );
 }
