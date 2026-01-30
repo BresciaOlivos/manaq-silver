@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default async function Home({
@@ -11,11 +12,19 @@ export default async function Home({
 
   return (
     <div className="grid gap-10">
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-[28px] border bg-neutral-950 text-white">
-        {/* soft glow */}
-        <div className="pointer-events-none absolute -top-28 -left-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+      <section className="relative overflow-hidden rounded-[28px] border bg-black text-white">
+        {/* Background image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/images/hero/hero.jpg"
+            alt="Manaq Silver"
+            fill
+            priority
+            className="object-cover"
+          />
+          {/* Luxury overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-black/80" />
+        </div>
 
         <div className="relative p-7 sm:p-10 md:p-14 grid gap-6 max-w-3xl">
           <p className="text-[11px] tracking-[0.35em] uppercase text-white/70">
@@ -57,11 +66,16 @@ export default async function Home({
             </Link>
           </div>
 
-          {/* TRUST ROW */}
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-            <Badge title={de ? "Versand aus Deutschland" : "Ships from Germany"} />
-            <Badge title={de ? "Limitierte Stücke" : "Limited pieces"} />
-            <Badge title={de ? "Sichere Kartenzahlung" : "Secure card payment"} />
+          <div className="pt-4 grid gap-3">
+            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
+              {de ? "Versand aus Deutschland" : "Ships from Germany"}
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
+              {de ? "Limitierte Stücke" : "Limited pieces"}
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/90">
+              {de ? "Sichere Kartenzahlung" : "Secure card payment"}
+            </div>
           </div>
         </div>
       </section>
