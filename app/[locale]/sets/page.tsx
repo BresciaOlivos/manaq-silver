@@ -1,20 +1,19 @@
 import { products } from "@/data/products";
 import { ProductCard } from "@/components/ProductCard";
 
-export default function SetsPage({
+export default async function SetsPage({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const locale: "de" | "en" = params.locale === "de" ? "de" : "en";
+  const { locale: rawLocale } = await params;
+  const locale: "de" | "en" = rawLocale === "de" ? "de" : "en";
 
   const items = products.filter((p) => p.category === "sets");
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">
-        {locale === "de" ? "Sets" : "Sets"}
-      </h1>
+      <h1 className="text-2xl font-semibold">{locale === "de" ? "Sets" : "Sets"}</h1>
 
       {items.length === 0 ? (
         <p className="text-neutral-600">No products yet.</p>
