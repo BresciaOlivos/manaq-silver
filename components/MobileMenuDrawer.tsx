@@ -1,122 +1,185 @@
 "use client";
 
 import Link from "next/link";
-import { X } from "lucide-react";
+import { useEffect } from "react";
 
-export function MobileMenuDrawer({
+export default function MobileMenuDrawer({
+  locale,
   open,
   onClose,
-  locale,
 }: {
+  locale: "de" | "en";
   open: boolean;
   onClose: () => void;
-  locale: "de" | "en";
 }) {
+  // Close on ESC
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (open) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  // lock body scroll while open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   const de = locale === "de";
 
-  if (!open) return null;
+  const items = [
+    { href: `/${locale}/sets`, label: de ? "Sets" : "Sets" },
+    { href: `/${locale}/earrings`, label: de ? "Ohrringe" : "Earrings" },
+    { href: `/${locale}/necklaces`, label: de ? "Ketten" : "Necklaces" },
+    { href: `/${locale}/rings`, label: de ? "Ringe" : "Rings" },
+    { href: `/${locale}/pendants`, label: de ? "Anhänger" : "Pendants" },
+    { href: `/${locale}/bracelets`, label: de ? "Armbänder" : "Bracelets" },
+  ];
+
+  const misc = [
+    { href: `/${locale}/about`, label: de ? "Über uns" : "About" },
+    { href: `/${locale}/contact`, label: de ? "Kontakt" : "Contact" },
+    { href: `/${locale}/policies`, label: de ? "Richtlinien" : "Policies" },
+  ];
 
   return (
-    <div className="fixed inset-0 z-50">
+    <>
       {/* Backdrop */}
-      <button
-        aria-label="Close menu"
+      <div
+        className={`fixed inset-0 z-[60] transition ${
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        } bg-black/45`}
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        aria-hidden
       />
 
-      {/* Panel */}
-      <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl">
-        <div className="p-5 border-b flex items-center justify-between">
-          <div className="text-sm font-semibold tracking-[0.25em] uppercase">
-            Manaq
+      {/* Drawer */}
+      <aside
+        className={`fixed top-0 right-0 z-[70] h-full w-[88%] max-w-sm bg-white border-l shadow-2xl transition-transform duration-300 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+      >
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="text-sm font-semibold tracking-[0.25em] uppercase text-neutral-900">
+            Manaq Silver
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border p-2 hover:bg-neutral-50"
+            className="rounded-full border px-3 py-2 text-sm hover:bg-neutral-50"
             aria-label="Close"
+            title="Close"
           >
-            <X className="h-5 w-5" />
+            ✕
           </button>
         </div>
 
-        <div className="p-5 grid gap-2 text-sm">
-          <MenuLink locale={locale} href="/earrings" label={de ? "Ohrringe" : "Earrings"} onClose={onClose} />
-          <MenuLink locale={locale} href="/necklaces" label={de ? "Ketten" : "Necklaces"} onClose={onClose} />
-          <MenuLink locale={locale} href="/rings" label={de ? "Ringe" : "Rings"} onClose={onClose} />
-          <MenuLink locale={locale} href="/sets" label="Sets" onClose={onClose} />
-          <MenuLink locale={locale} href="/pendants" label={de ? "Anhänger" : "Pendants"} onClose={onClose} />
-          <MenuLink locale={locale} href="/about" label={de ? "Über uns" : "About"} onClose={onClose} />
-          <MenuLink locale={locale} href="/contact" label={de ? "Kontakt" : "Contact"} onClose={onClose} />
-          <div className="my-3 border-t" />
+        <div className="p-4 grid gap-6">
+          {/* Primary links */}
+          <div className="grid gap-2">
+            <div className="text-xs tracking-[0.35em] uppercase text-neutral-500">
+              {de ? "Shop" : "Shop"}
+            </div>
 
-          <MenuLink locale={locale} href="/cart" label={de ? "Warenkorb" : "Cart"} onClose={onClose} />
-          <MenuLink locale={locale} href="/account" label={de ? "Konto" : "Account"} onClose={onClose} />
-
-          <div className="my-3 border-t" />
-          <div className="text-xs text-neutral-500">{de ? "Sprache" : "Language"}</div>
-          <div className="flex gap-2">
-            <LangButton active={locale === "de"} href="/de" label="DE" onClose={onClose} />
-            <LangButton active={locale === "en"} href="/en" label="EN" onClose={onClose} />
+            <div className="grid gap-2">
+              {items.map((it) => (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  onClick={onClose}
+                  className="rounded-2xl border bg-white px-4 py-3 text-sm text-neutral-900 hover:bg-neutral-50"
+                >
+                  {it.label}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          <div className="my-3 border-t" />
-          <div className="text-xs text-neutral-500">{de ? "Richtlinien" : "Policies"}</div>
-          <MenuLink locale={locale} href="/policy/shipping" label={de ? "Versand" : "Shipping"} onClose={onClose} />
-          <MenuLink locale={locale} href="/policy/returns" label={de ? "Rückgabe" : "Returns"} onClose={onClose} />
-          <MenuLink locale={locale} href="/policy/privacy" label={de ? "Datenschutz" : "Privacy"} onClose={onClose} />
+          {/* Account / Cart */}
+          <div className="grid gap-2">
+            <div className="text-xs tracking-[0.35em] uppercase text-neutral-500">
+              {de ? "Konto" : "Account"}
+            </div>
+            <div className="grid gap-2">
+              <Link
+                href={`/${locale}/cart`}
+                onClick={onClose}
+                className="rounded-2xl bg-neutral-900 text-white px-4 py-3 text-sm hover:opacity-90"
+              >
+                {de ? "Warenkorb" : "Cart"}
+              </Link>
 
-          <div className="mt-6 text-xs text-neutral-500">
+              <Link
+                href={`/${locale}/account`}
+                onClick={onClose}
+                className="rounded-2xl border px-4 py-3 text-sm hover:bg-neutral-50"
+              >
+                {de ? "Anmelden" : "Login"}
+              </Link>
+            </div>
+          </div>
+
+          {/* Other */}
+          <div className="grid gap-2">
+            <div className="text-xs tracking-[0.35em] uppercase text-neutral-500">
+              {de ? "Info" : "Info"}
+            </div>
+
+            <div className="grid gap-2">
+              {misc.map((it) => (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  onClick={onClose}
+                  className="rounded-2xl border px-4 py-3 text-sm hover:bg-neutral-50"
+                >
+                  {it.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Language */}
+          <div className="grid gap-2">
+            <div className="text-xs tracking-[0.35em] uppercase text-neutral-500">
+              {de ? "Sprache" : "Language"}
+            </div>
+
+            <div className="flex gap-2">
+              <Link
+                href={`/de`}
+                onClick={onClose}
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  locale === "de" ? "bg-neutral-900 text-white" : "hover:bg-neutral-50"
+                }`}
+              >
+                DE
+              </Link>
+              <Link
+                href={`/en`}
+                onClick={onClose}
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  locale === "en" ? "bg-neutral-900 text-white" : "hover:bg-neutral-50"
+                }`}
+              >
+                EN
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-2 text-xs text-neutral-500">
             © {new Date().getFullYear()} Manaq Silver
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MenuLink({
-  locale,
-  href,
-  label,
-  onClose,
-}: {
-  locale: "de" | "en";
-  href: string;
-  label: string;
-  onClose: () => void;
-}) {
-  return (
-    <Link
-      href={`/${locale}${href}`}
-      onClick={onClose}
-      className="rounded-xl border px-4 py-3 hover:bg-neutral-50 transition"
-    >
-      {label}
-    </Link>
-  );
-}
-
-function LangButton({
-  active,
-  href,
-  label,
-  onClose,
-}: {
-  active: boolean;
-  href: string;
-  label: string;
-  onClose: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClose}
-      className={`rounded-full border px-4 py-2 text-xs font-semibold ${
-        active ? "bg-neutral-900 text-white border-neutral-900" : "bg-white"
-      }`}
-    >
-      {label}
-    </Link>
+      </aside>
+    </>
   );
 }
