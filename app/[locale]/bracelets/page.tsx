@@ -1,0 +1,33 @@
+import { products } from "@/data/products";
+import { ProductCard } from "@/components/ProductCard";
+
+export default async function BraceletsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale: "de" | "en" = rawLocale === "de" ? "de" : "en";
+
+  const items = products.filter((p) => p.category === "bracelets");
+
+  return (
+    <div className="grid gap-6">
+      <h1 className="text-2xl font-semibold">
+        {locale === "de" ? "Armbänder" : "Bracelets"}
+      </h1>
+
+      {items.length === 0 ? (
+        <p className="text-neutral-600">
+          {locale === "de" ? "Noch keine Produkte." : "No products yet."}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {items.map((p) => (
+            <ProductCard key={p.id} locale={locale} product={p} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -10,13 +10,15 @@ type DbProduct = {
   name_en: string;
   name_de: string;
   price: number;
+  status?: string | null;
 };
 
-function formatMs(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+function moneyEUR(n: number) {
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 export default function CartPage() {
@@ -24,55 +26,39 @@ export default function CartPage() {
   const locale: "de" | "en" = params.locale === "de" ? "de" : "en";
   const cart = useCart();
 
-  const [products, setProducts] = useState<DbProduct[]>([]);
-  const [expMap, setExpMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
-  const [checkingOut, setCheckingOut] = useState(false);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   const ids = useMemo(() => cart.items.map((x) => x.productId), [cart.items]);
+
+  const [products, setProducts] = useState<Record<string, DbProduct>>({});
+  const [loading, setLoading] = useState(true);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   async function load() {
     setLoading(true);
 
     if (ids.length === 0) {
-      setProducts([]);
-      setExpMap({});
+      setProducts({});
       setLoading(false);
       return;
     }
 
-    const { data: prodData, error: prodErr } = await supabase
+    const { data, error } = await supabase
       .from("products")
       .select("id,name_en,name_de,price,status")
       .in("id", ids);
 
-    if (prodErr) {
-      console.error(prodErr);
-      setProducts([]);
-      setExpMap({});
+    if (error) {
+      console.error(error);
+      setProducts({});
       setLoading(false);
       return;
     }
 
-    // Keep only items that still exist (and show them)
-    setProducts((prodData ?? []) as any);
+    const map: Record<string, DbProduct> = {};
+    (data ?? []).forEach((p: any) => {
+      map[p.id] = p as DbProduct;
+    });
 
-    const { data: resData } = await supabase
-      .from("reservations")
-      .select("product_id,expires_at")
-      .in("product_id", ids)
-      .eq("status", "active");
-
-    const map: Record<string, string> = {};
-    (resData ?? []).forEach((r) => (map[r.product_id] = r.expires_at));
-    setExpMap(map);
-
+    setProducts(map);
     setLoading(false);
   }
 
@@ -81,97 +67,131 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids.join(",")]);
 
-  // ✅ run cleanup + reload every 5s while cart has items
-  useEffect(() => {
-    if (ids.length === 0) return;
-
-    const t = setInterval(async () => {
-      await supabase.rpc("release_expired_reservations");
-      await load();
-    }, 5000);
-
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids.join(",")]);
-
-  // ✅ if an item has no active reservation anymore, remove it from cart
-  useEffect(() => {
-    if (ids.length === 0) return;
-    ids.forEach((pid) => {
-      if (!expMap[pid]) {
-        // no active reservation => remove from cart
-        cart.remove(pid);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(expMap)]);
-
-  const total = products.reduce((sum, p) => sum + p.price, 0);
+  const total = useMemo(() => {
+    return cart.items.reduce((sum, item) => {
+      const p = products[item.productId];
+      if (!p) return sum;
+      return sum + p.price * (item.qty ?? 1);
+    }, 0);
+  }, [cart.items, products]);
 
   async function goCheckout() {
-    setCheckingOut(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIds: ids, locale }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        alert(json.error || "Checkout failed");
-        setCheckingOut(false);
-        return;
-      }
-
-      window.location.href = json.url;
-    } catch {
-      alert("Checkout failed");
-      setCheckingOut(false);
-    }
+  if (cart.items.length === 0) {
+    alert("Cart is empty.");
+    return;
   }
+
+  setCheckingOut(true);
+
+  try {
+    const payload = {
+      locale,
+      items: cart.items.map((x) => ({ id: x.productId, qty: x.qty ?? 1 })),
+    };
+
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // Read text first (works even if server throws weird things)
+    const text = await res.text();
+
+    let json: any = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // Not JSON — show raw response
+      alert(`Checkout failed (non-JSON):\n${text}`);
+      setCheckingOut(false);
+      return;
+    }
+
+    if (!res.ok) {
+      alert(`Checkout failed:\n${json?.error ?? "Unknown error"}`);
+      setCheckingOut(false);
+      return;
+    }
+
+    if (!json?.url) {
+      alert("Checkout failed: missing Stripe URL.");
+      setCheckingOut(false);
+      return;
+    }
+
+    window.location.href = json.url;
+  } catch (e: any) {
+    alert(`Checkout error:\n${e?.message ?? "Unknown error"}`);
+    setCheckingOut(false);
+  }
+}
 
   return (
     <div className="grid gap-6 max-w-2xl p-6">
-      <h1 className="text-2xl font-semibold">{locale === "de" ? "Warenkorb" : "Cart"}</h1>
+      <h1 className="text-2xl font-semibold">
+        {locale === "de" ? "Warenkorb" : "Cart"}
+      </h1>
 
       {loading ? (
         <p className="text-neutral-600">Loading…</p>
-      ) : products.length === 0 ? (
+      ) : cart.items.length === 0 ? (
         <p className="text-neutral-600">
           {locale === "de" ? "Dein Warenkorb ist leer." : "Your cart is empty."}
         </p>
       ) : (
         <div className="grid gap-3">
-          {products.map((p) => {
-            const msLeft = expMap[p.id]
-              ? Math.max(0, new Date(expMap[p.id]).getTime() - now)
-              : 0;
+          {cart.items.map((item) => {
+            const p = products[item.productId];
+            const qty = item.qty ?? 1;
 
             return (
-              <div key={p.id} className="flex items-center justify-between rounded-xl border p-4">
+              <div
+                key={item.productId}
+                className="flex items-center justify-between rounded-xl border p-4"
+              >
                 <div className="grid gap-1">
-                  <div className="font-medium">{locale === "de" ? p.name_de : p.name_en}</div>
-                  <div className="text-sm text-neutral-600">€{p.price}</div>
+                  <div className="font-medium">
+                    {p
+                      ? locale === "de"
+                        ? p.name_de
+                        : p.name_en
+                      : locale === "de"
+                      ? "Produkt nicht gefunden"
+                      : "Product not found"}
+                  </div>
 
-                  {expMap[p.id] && (
-                    <div className="text-xs text-neutral-600">
-                      {locale === "de" ? "Läuft ab in: " : "Expires in: "}
-                      <span className="font-mono">{formatMs(msLeft)}</span>
-                    </div>
-                  )}
+                  <div className="text-sm text-neutral-600">
+                    {p ? moneyEUR(p.price) : "—"} • Qty: {qty}
+                  </div>
                 </div>
 
-                <button onClick={() => cart.remove(p.id)} className="text-sm underline text-neutral-700">
-                  {locale === "de" ? "Entfernen" : "Remove"}
-                </button>
+                <button
+  onClick={async () => {
+    // Release reservation in DB first
+    await fetch("/api/cart/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: item.productId }),
+    });
+
+    // Then remove locally
+    cart.remove(item.productId);
+
+    // Reload products map
+    await load();
+  }}
+  className="text-sm underline text-neutral-700"
+>
+  Remove
+</button>
               </div>
             );
           })}
 
           <div className="flex items-center justify-between pt-2">
             <div className="font-medium">{locale === "de" ? "Summe" : "Total"}</div>
-            <div className="font-medium">€{total}</div>
+            <div className="font-medium">{moneyEUR(total)}</div>
           </div>
 
           <button

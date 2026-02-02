@@ -1,49 +1,15 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { products } from "@/data/products";
 import { ProductCard } from "@/components/ProductCard";
 
-type DbProduct = {
-  id: string;
-  name_en: string;
-  name_de: string;
-  price: number;
-  category: string;
-  description_en: string | null;
-  description_de: string | null;
-};
+export default async function EarringsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
+  const locale: "de" | "en" = rawLocale === "de" ? "de" : "en";
 
-export default function EarringsPage() {
-  const params = useParams();
-  const locale: "de" | "en" = params.locale === "de" ? "de" : "en";
-
-  const [items, setItems] = useState<DbProduct[]>([]);
-
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("category", "earrings");
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-      setItems(data ?? []);
-    })();
-  }, []);
-
-  const mapped = items.map((p) => ({
-    id: p.id,
-    name: { en: p.name_en, de: p.name_de },
-    price: p.price,
-    category: "earrings" as const,
-    description: { en: p.description_en ?? "", de: p.description_de ?? "" },
-    image: "/placeholder.jpg",
-  }));
+  const items = products.filter((p) => p.category === "earrings");
 
   return (
     <div className="grid gap-6">
@@ -51,11 +17,17 @@ export default function EarringsPage() {
         {locale === "de" ? "Ohrringe" : "Earrings"}
       </h1>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {mapped.map((p) => (
-          <ProductCard key={p.id} locale={locale} product={p as any} />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <p className="text-neutral-600">
+          {locale === "de" ? "Noch keine Produkte." : "No products yet."}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {items.map((p) => (
+            <ProductCard key={p.id} locale={locale} product={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
