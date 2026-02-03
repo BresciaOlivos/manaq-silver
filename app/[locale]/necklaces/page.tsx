@@ -1,20 +1,23 @@
-import { products } from "@/data/products";
 import { ProductCard } from "@/components/ProductCard";
+import { fetchProductsByCategory } from "@/lib/productsDb";
 
-export default function NecklacesPage({
+const supported = ["de", "en"] as const;
+
+export default async function NecklacesPage({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const locale: "de" | "en" = params.locale === "de" ? "de" : "en";
+  const { locale: rawLocale } = await params;
+  const locale: "de" | "en" = supported.includes(rawLocale as any)
+    ? (rawLocale as any)
+    : "en";
 
-  const items = products.filter((p) => p.category === "necklaces");
+  const items = await fetchProductsByCategory("necklaces");
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">
-        {locale === "de" ? "Halsketten" : "Necklaces"}
-      </h1>
+      <h1 className="text-2xl font-semibold">Necklaces</h1>
 
       {items.length === 0 ? (
         <p className="text-neutral-600">No products yet.</p>

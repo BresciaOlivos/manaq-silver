@@ -32,6 +32,8 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
 
+  const [shipZone, setShipZone] = useState <"DE" | "EU"> ("DE");
+
   async function load() {
     if (!cart.ready) return;
 
@@ -97,6 +99,7 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale,
+          shipZone,
           items: cart.items.map((x) => ({ id: x.productId, qty: x.qty ?? 1 })),
         }),
       });
@@ -132,6 +135,20 @@ export default function CartPage() {
         </p>
       ) : (
         <div className="grid gap-3">
+
+          <div className="rounded-xl border p-4 grid gap-2">
+  <div className="font-medium">Shipping region</div>
+
+  <select
+    value={shipZone}
+    onChange={(e) => setShipZone(e.target.value as "DE" | "EU")}
+    className="border rounded-lg px-3 py-2"
+  >
+    <option value="DE">Germany (€4 • free over €55)</option>
+    <option value="EU">EU (€7 • free over €85)</option>
+  </select>
+</div>
+
           {cart.items.map((item) => {
             const p = products[item.productId];
             const qty = item.qty ?? 1;
