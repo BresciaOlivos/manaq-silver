@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-type Body = {
-  productId?: string;
-};
-
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,40 +14,23 @@ function getSupabaseAdmin() {
 export async function POST(req: Request) {
   try {
     const supabase = getSupabaseAdmin();
-    const body = (await req.json()) as Body;
+    const { productId } = (await req.json()) as { productId?: string };
 
-    const productId = String(body?.productId ?? "").trim();
-    if (!productId) {
-      return NextResponse.json({ error: "Missing productId" }, { status: 400 });
-    }
+    const id = String(productId ?? "").trim();
+    if (!id) return NextResponse.json({ ok: true });
 
-    // 1) Delete any active reservation for this product
-    const { error: resErr } = await supabase
+    // mark active reservations as released
+    await supabase
       .from("reservations")
-      .delete()
-      .eq("product_id", productId)
+      .update({ status: "released" })
+      .eq("product_id", id)
       .eq("status", "active");
 
-    if (resErr) {
-      return NextResponse.json({ error: resErr.message }, { status: 500 });
-    }
-
-    // 2) Mark product back to available (only if it was reserved)
-    const { error: prodErr } = await supabase
-      .from("products")
-      .update({ status: "available" })
-      .eq("id", productId)
-      .eq("status", "reserved");
-
-    if (prodErr) {
-      return NextResponse.json({ error: prodErr.message }, { status: 500 });
-    }
+    // set product back to available (only if you use these statuses)
+    await supabase.from("products").update({ status: "available" }).eq("id", id);
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message ?? "Release failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message ?? "release failed" }, { status: 500 });
   }
 }

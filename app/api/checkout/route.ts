@@ -10,7 +10,10 @@ type ReqBody = {
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("Missing STRIPE_SECRET_KEY");
-  return new Stripe(key);
+  return new Stripe(key, {
+    // If you hit the apiVersion type error again, remove this line.
+    // apiVersion: "2024-06-20",
+  });
 }
 
 function getSupabaseAdmin() {
@@ -20,7 +23,9 @@ function getSupabaseAdmin() {
   if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
   if (!serviceKey) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
 
-  return createClient(url, serviceKey, { auth: { persistSession: false } });
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false },
+  });
 }
 
 export async function POST(req: Request) {
@@ -31,11 +36,13 @@ export async function POST(req: Request) {
     const body = (await req.json()) as ReqBody;
     const locale: "de" | "en" = body?.locale === "de" ? "de" : "en";
 
-    const items = Array.isArray(body?.items) ? body.items : [];
-    const clean = items
+    const incoming = Array.isArray(body?.items) ? body.items : [];
+
+    // Clean & normalize
+    const clean = incoming
       .map((x) => ({
-        id: String(x.id || "").trim(),
-        qty: Math.max(1, Number(x.qty ?? 1)),
+        id: String(x?.id ?? "").trim(),
+        qty: Math.max(1, Number(x?.qty ?? 1)),
       }))
       .filter((x) => x.id);
 
@@ -60,19 +67,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No products found." }, { status: 400 });
     }
 
-    // Index for quick lookup
+    // Map for lookup
     const byId = new Map(products.map((p: any) => [p.id, p]));
 
-    // Build line items, skipping missing IDs (but you can also hard-fail if you want)
+    // Build Stripe line items in the SAME order as cart items
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
     for (const it of clean) {
       const p = byId.get(it.id);
-      if (!p) continue;
+      if (!p) continue; // skip IDs not found in DB
 
       // Optional: block sold items
       if (p.status === "sold") {
         return NextResponse.json(
           { error: "One or more items are already sold. Please remove them and try again." },
+          { status: 400 }
+        );
+      }
+
+      // Validate price
+      const price = Number(p.price);
+      if (!Number.isFinite(price) || price <= 0) {
+        return NextResponse.json(
+          { error: `Invalid price for product ${p.id}.` },
           { status: 400 }
         );
       }
@@ -83,7 +100,7 @@ export async function POST(req: Request) {
           product_data: {
             name: locale === "de" ? p.name_de : p.name_en,
           },
-          unit_amount: Math.round(Number(p.price) * 100),
+          unit_amount: Math.round(price * 100), // cents
         },
         quantity: it.qty,
       });
@@ -94,14 +111,15 @@ export async function POST(req: Request) {
     }
 
     const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const success = `${site}/${locale}?success=1`;
-    const cancel = `${site}/${locale}/cart?canceled=1`;
+
+    const success_url = `${site}/${locale}?success=1`;
+    const cancel_url = `${site}/${locale}/cart?canceled=1`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
-      success_url: success,
-      cancel_url: cancel,
+      success_url,
+      cancel_url,
       metadata: {
         productIds: ids.join(","),
         locale,
