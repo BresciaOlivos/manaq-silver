@@ -1,16 +1,70 @@
-
 import HeroMobile from "@/components/HeroMobile";
+import HighlightsRow from "@/components/HighlightsRow";
 import Link from "next/link";
-import Image from "next/image";
+import { getSupabaseServer } from "@/lib/supabaseServer";
 
-type Highlight = {
+const supported = ["de", "en"] as const;
+
+type DbProduct = {
   id: string;
-  title: { de: string; en: string };
-  subtitle: { de: string; en: string };
+  name_en: string;
+  name_de: string;
   price: number;
-  href: string;
-  imageSrc: string;
+  category: string;
+  images: string[] | null;
+  // if you also have a single image field, keep it optional:
+  image?: string | null;
+  created_at?: string | null;
 };
+
+function coverFrom(p: DbProduct): string {
+  const arr = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
+  const first = arr[0]?.trim();
+  const legacy = (p.image ?? "").trim();
+  return first || legacy || "/placeholder.jpg";
+}
+
+function titleFor(p: DbProduct, locale: "de" | "en") {
+  return locale === "de" ? p.name_de : p.name_en;
+}
+
+// picks 2 items, preferably from different categories, avoiding duplicates
+function pickHighlights(all: DbProduct[], locale: "de" | "en") {
+  const seen = new Set<string>();
+  const usedCats = new Set<string>();
+
+  const picked: DbProduct[] = [];
+  for (const p of all) {
+    if (seen.has(p.id)) continue;
+    if (usedCats.has(p.category) && picked.length < 2) continue; // prefer variety
+    picked.push(p);
+    seen.add(p.id);
+    usedCats.add(p.category);
+    if (picked.length >= 2) break;
+  }
+
+  // fallback if we couldn't get variety
+  if (picked.length < 2) {
+    for (const p of all) {
+      if (seen.has(p.id)) continue;
+      picked.push(p);
+      seen.add(p.id);
+      if (picked.length >= 2) break;
+    }
+  }
+
+  return picked.map((p) => ({
+    id: p.id,
+    title: { de: p.name_de, en: p.name_en },
+    subtitle: {
+      de: `${p.category} • 950 Silber`,
+      en: `${p.category} • 950 silver`,
+    },
+    price: p.price,
+    href: `/product/${p.id}`,
+    imageSrc: coverFrom(p),
+  }));
+}
 
 export default async function Home({
   params,
@@ -18,105 +72,94 @@ export default async function Home({
   params: Promise<{ locale: string }>;
 }) {
   const { locale: rawLocale } = await params;
-  const locale: "de" | "en" = rawLocale === "de" ? "de" : "en";
+  const locale: "de" | "en" = supported.includes(rawLocale as any)
+    ? (rawLocale as any)
+    : "en";
   const de = locale === "de";
 
-  const highlights: Highlight[] = [
-    {
-      id: "cereza",
-      title: { de: "Set Cereza", en: "Cereza set" },
-      subtitle: { de: "Ohrringe + Anhänger • Peru", en: "Earrings + pendant • Peru" },
-      price: 50,
-      href: `/${locale}/sets`,
-      imageSrc: "/images/sets/cereza/cereza1.png",
-    },
-    {
-      id: "cereza-2",
-      title: { de: "Cereza Detail", en: "Cereza detail" },
-      subtitle: { de: "950 Silber • Handarbeit", en: "950 silver • Handmade" },
-      price: 50,
-      href: `/${locale}/sets`,
-      imageSrc: "/images/sets/cereza/cereza2.png",
-    },
-  ];
+  const supabase = getSupabaseServer();
+
+  // newest first (you can swap to .order("updated_at"... if you have that)
+  const { data } = await supabase
+    .from("products")
+    .select("id,name_en,name_de,price,category,images,image,created_at")
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  const products = (data ?? []) as DbProduct[];
+
+  const highlights = pickHighlights(products, locale);
 
   return (
     <div className="grid gap-10">
       <HeroMobile locale={locale} />
 
-      {/* Highlights row */}
-      <section className="grid gap-3">
+      {/* ===== HIGHLIGHTS (luxury row + filter) ===== */}
+      <section className="grid gap-4">
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-lg font-semibold">{de ? "Neu & Highlights" : "New & Highlights"}</h2>
+            <h2 className="text-lg font-semibold text-neutral-900">
+              {de ? "Neu & beliebt" : "New & loved"}
+            </h2>
             <p className="text-sm text-neutral-600">
-              {de ? "Wische für mehr →" : "Swipe for more →"}
+              {de ? "Kuratierte Auswahl — limitiert." : "Curated picks — limited pieces."}
             </p>
           </div>
+
           <Link
-            href={`/${locale}/sets`}
-            className="text-sm text-neutral-700 hover:text-neutral-900"
+            href={`/${locale}/shop`}
+            className="text-sm text-neutral-800 hover:underline"
           >
             {de ? "Alle ansehen →" : "View all →"}
           </Link>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory">
-          {highlights.map((h) => (
-            <Link
-              key={h.id}
-              href={h.href}
-              className="snap-start shrink-0 w-[82%] sm:w-[46%] lg:w-[30%] rounded-[24px] border bg-white p-4 hover:shadow-lg transition"
-            >
-              <div className="relative h-48 rounded-2xl overflow-hidden bg-neutral-100">
-                <Image
-                  src={h.imageSrc}
-                  alt={h.title[locale]}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 80vw, 33vw"
-                />
-              </div>
-
-              <div className="mt-4 grid gap-1">
-                <div className="text-[11px] tracking-[0.25em] uppercase text-neutral-500">
-                  Manaq
-                </div>
-                <div className="text-base font-medium text-neutral-900">{h.title[locale]}</div>
-                <div className="text-sm text-neutral-600">{h.subtitle[locale]}</div>
-                <div className="pt-1 text-sm text-neutral-900 font-medium">€{h.price}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <HighlightsRow locale={locale} items={highlights} />
       </section>
 
-      {/* Categories */}
+      {/* ===== CATEGORY GRID (clean + luxury) ===== */}
       <section className="grid gap-4">
-        <h2 className="text-lg font-semibold">{de ? "Shop" : "Shop"}</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">
+          {de ? "Shop" : "Shop"}
+        </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Cat locale={locale} href="earrings" title={de ? "Ohrringe" : "Earrings"} />
-          <Cat locale={locale} href="necklaces" title={de ? "Ketten" : "Necklaces"} />
           <Cat locale={locale} href="rings" title={de ? "Ringe" : "Rings"} />
           <Cat locale={locale} href="sets" title="Sets" />
+          <Cat locale={locale} href="bracelets" title={de ? "Armbänder" : "Bracelets"} />
           <Cat locale={locale} href="pendants" title={de ? "Anhänger" : "Pendants"} />
-                    <Cat locale={locale} href="bracelets" title={de ? "Armbänder" : "bracelets"} />
-
-          <Cat locale={locale} href="about" title={de ? "Über uns" : "About"} />
+          <Cat locale={locale} href="necklaces" title={de ? "Ketten" : "Necklaces"} />
         </div>
       </section>
 
-      {/* Contact strip */}
-      <section className="rounded-3xl border bg-white p-6 grid gap-3">
-        <div className="text-sm font-semibold text-neutral-900">
-          {de ? "Kontakt" : "Contact"}
+      {/* ===== Artisan / Luxury Story Strip ===== */}
+      <section className="rounded-[28px] border bg-white p-6 sm:p-8 grid gap-3">
+        <div className="text-[11px] tracking-[0.35em] uppercase text-neutral-500">
+          Manaq Silver • 950
         </div>
+        <h3 className="text-xl sm:text-2xl font-semibold text-neutral-900">
+          {de ? "Peru in jedem Detail." : "Peru in every detail."}
+        </h3>
+        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed max-w-2xl">
+          {de
+            ? "Handveredelte Stücke aus 950er Silber — kuratiert in Europa. Limitiert, sorgfältig verpackt und schnell versendet."
+            : "Hand-finished pieces in 950 silver — curated in Europe. Limited, carefully packed, and shipped fast."}
+        </p>
 
-        <div className="text-sm text-neutral-700 grid gap-1">
-          <div>Email: hello@manaqsilver.de</div>
-          <div>Instagram: @manaqsilver</div>
-          <div>TikTok: @manaqsilver</div>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Link
+            href={`/${locale}/about`}
+            className="rounded-full bg-neutral-900 text-white px-5 py-2 text-sm hover:opacity-90"
+          >
+            {de ? "Unsere Story" : "Our story"}
+          </Link>
+          <Link
+            href={`/${locale}/contact`}
+            className="rounded-full border px-5 py-2 text-sm hover:bg-neutral-50"
+          >
+            {de ? "Kontakt" : "Contact"}
+          </Link>
         </div>
       </section>
     </div>
@@ -129,9 +172,13 @@ function Cat({ locale, href, title }: { locale: string; href: string; title: str
       href={`/${locale}/${href}`}
       className="rounded-[22px] border bg-white p-6 hover:bg-neutral-50 transition"
     >
-      <div className="text-[11px] tracking-[0.25em] uppercase text-neutral-500">Manaq</div>
+      <div className="text-[11px] tracking-[0.25em] uppercase text-neutral-500">
+        Manaq
+      </div>
       <div className="mt-2 text-xl font-semibold text-neutral-900">{title}</div>
-      <div className="mt-2 text-sm text-neutral-600">{locale === "de" ? "Entdecken →" : "Explore →"}</div>
+      <div className="mt-2 text-sm text-neutral-600">
+        {locale === "de" ? "Entdecken →" : "Explore →"}
+      </div>
     </Link>
   );
 }

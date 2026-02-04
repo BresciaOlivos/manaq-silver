@@ -9,3 +9,5 @@ export function getSupabaseServer() {
 
   return createClient(url, key, { auth: { persistSession: false } });
 }
+
+export const supabaseServer = getSupabaseServer;

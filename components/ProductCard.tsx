@@ -1,9 +1,25 @@
-// components/ProductCard.tsx
-import Link from "next/link";
 import Image from "next/image";
-import type { DbProduct } from "@/lib/productsDb";
+import Link from "next/link";
 
-export function ProductCard({
+export type DbProduct = {
+  id: string;
+  category: string;
+  price: number;
+  name_en: string;
+  name_de: string;
+  description_en: string | null;
+  description_de: string | null;
+  images: string[] | null; // we store paths here
+  status?: string | null;
+};
+
+function firstImage(p: DbProduct) {
+  const arr = Array.isArray(p.images) ? p.images : [];
+  const first = arr.find((x) => typeof x === "string" && x.trim().length > 0);
+  return first ?? "/placeholder.jpg";
+}
+
+export default function ProductCard({
   locale,
   product,
 }: {
@@ -11,9 +27,7 @@ export function ProductCard({
   product: DbProduct;
 }) {
   const name = locale === "de" ? product.name_de : product.name_en;
-
-  // For now: placeholder image (tomorrow we connect your real photos)
-  const cover = "/placeholder.jpg";
+  const cover = firstImage(product);
 
   return (
     <Link
@@ -26,14 +40,8 @@ export function ProductCard({
           alt={name}
           fill
           sizes="(max-width: 768px) 100vw, 400px"
-          className="object-cover"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
-
-        {product.status === "reserved" && (
-          <div className="absolute top-3 left-3 rounded-full bg-neutral-900 px-3 py-1 text-xs text-white">
-            {locale === "de" ? "Reserviert" : "Reserved"}
-          </div>
-        )}
       </div>
 
       <div className="mt-4 grid gap-1">

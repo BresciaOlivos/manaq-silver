@@ -18,7 +18,7 @@ export default function HeroMobile({ locale }: { locale: "de" | "en" }) {
           sizes="100vw"
         />
         {/* Luxury overlay: softer, more premium */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/45 to-black/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/45 to-black/80" />
         {/* subtle vignette */}
         <div className="absolute inset-0 [box-shadow:inset_0_-120px_180px_rgba(0,0,0,0.65)]" />
       </div>
@@ -29,7 +29,7 @@ export default function HeroMobile({ locale }: { locale: "de" | "en" }) {
           {de ? "950 Peruanisches Silber" : "950 Peruvian Silver"}
         </p>
 
-        <h1 className="mt-3 text-[34px] leading-[1.05] sm:text-5xl font-semibold tracking-tight">
+        <h1 className="mt-3 text-[34px] leading-[1.05] sm:text-6xl font-semibold tracking-tight">
           {de ? "Peru in Silber." : "Peru in silver."}
         </h1>
 

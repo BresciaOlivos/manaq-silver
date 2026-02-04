@@ -2,11 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { products } from "@/data/products";
-import type { Product } from "@/data/products";
+import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/components/CartProvider";
+
+type DbProduct = {
+  id: string;
+  category: string;
+  price: number;
+  name_en: string;
+  name_de: string;
+  description_en: string | null;
+  description_de: string | null;
+  images: string[] | null;
+};
 
 function moneyEUR(n: number) {
   return new Intl.NumberFormat("de-DE", {
@@ -16,31 +26,63 @@ function moneyEUR(n: number) {
   }).format(n);
 }
 
-function getImages(p: any): string[] {
-  // Supports: image: "..." OR image: ["...","..."]
-  const img = p?.image;
-  if (Array.isArray(img)) return img.map((x) => String(x).trim()).filter(Boolean);
-  if (typeof img === "string" && img.trim()) return [img.trim()];
-  return ["/placeholder.jpg"];
+function normalizeImages(p: DbProduct | null): string[] {
+  const arr = p?.images;
+  const list = Array.isArray(arr) ? arr.filter((x) => typeof x === "string" && x.trim()) : [];
+  return list.length ? list : ["/placeholder.jpg"];
 }
 
 export default function ProductPage() {
   const params = useParams();
-  const locale: "de" | "en" = params?.locale === "de" ? "de" : "en";
-  const id = params.id as string;
+  const locale: "de" | "en" = params.locale === "de" ? "de" : "en";
+  const id = String(params.id || "");
 
   const cart = useCart();
 
-  const product = useMemo<Product | undefined>(
-    () => products.find((p) => p.id === id),
-    [id]
-  );
+  const [product, setProduct] = useState<DbProduct | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const images = useMemo(() => getImages(product), [product]);
-
-  // carousel state
+  // carousel
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function load() {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,category,price,name_en,name_de,description_en,description_de,images")
+        .eq("id", id)
+        .single();
+
+      if (!alive) return;
+
+      if (error) {
+        console.error(error);
+        setProduct(null);
+        setLoading(false);
+        return;
+      }
+
+      const fixed = {
+        ...(data as any),
+        images: Array.isArray((data as any).images) ? (data as any).images : [],
+      } as DbProduct;
+
+      setProduct(fixed);
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  const images = useMemo(() => normalizeImages(product), [product]);
 
   function onScroll() {
     const el = scrollerRef.current;
@@ -55,6 +97,8 @@ export default function ProductPage() {
     el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   }
 
+  if (loading) return <div className="p-6">Loading…</div>;
+
   if (!product) {
     return (
       <div className="max-w-2xl mx-auto py-10 grid gap-3">
@@ -62,27 +106,23 @@ export default function ProductPage() {
           {locale === "de" ? "Produkt nicht gefunden" : "Product not found"}
         </h1>
         <div className="text-sm text-neutral-600">id: {id}</div>
-        <Link
-          href={`/${locale}`}
-          className="text-sm underline text-neutral-900"
-        >
+        <Link href={`/${locale}`} className="text-sm underline text-neutral-900">
           {locale === "de" ? "Zur Startseite" : "Back to home"}
         </Link>
       </div>
     );
   }
 
-  const name = product.name[locale];
-  const desc = product.description[locale];
+  const name = locale === "de" ? product.name_de : product.name_en;
+  const desc = locale === "de" ? product.description_de ?? "" : product.description_en ?? "";
 
   const alreadyInCart = cart.items.some((x) => x.productId === id);
 
   return (
-    <div className="max-w-3xl mx-auto grid gap-6 lg:gap-10">
-      {/* ====== MEDIA (Luxury carousel) ====== */}
+    <div className="max-w-3xl mx-auto grid gap-6 lg:gap-10 p-4">
+      {/* Carousel */}
       <section className="grid gap-3">
         <div className="relative rounded-3xl border bg-white overflow-hidden">
-          {/* swipe container */}
           <div
             ref={scrollerRef}
             onScroll={onScroll}
@@ -102,62 +142,35 @@ export default function ProductPage() {
                   sizes="(max-width: 768px) 100vw, 700px"
                   className="object-cover"
                 />
-                {/* soft overlay to feel luxury */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
               </div>
             ))}
           </div>
 
-          {/* counter top-right */}
           {images.length > 1 && (
-            <div className="absolute top-3 right-3 rounded-full bg-black/55 text-white text-xs px-3 py-1 backdrop-blur">
-              {active + 1}/{images.length}
-            </div>
-          )}
+            <>
+              <div className="absolute top-3 right-3 rounded-full bg-black/55 text-white text-xs px-3 py-1 backdrop-blur">
+                {active + 1}/{images.length}
+              </div>
 
-          {/* dots */}
-          {images.length > 1 && (
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
-              {images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  aria-label={`Go to image ${i + 1}`}
-                  className={`h-2.5 w-2.5 rounded-full transition ${
-                    i === active ? "bg-white" : "bg-white/40"
-                  }`}
-                />
-              ))}
-            </div>
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
+                {images.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    className={`h-2.5 w-2.5 rounded-full transition ${
+                      i === active ? "bg-white" : "bg-white/40"
+                    }`}
+                    aria-label={`Go to image ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
-
-        {/* thumbnails (desktop only, optional luxury feel) */}
-        {images.length > 1 && (
-          <div className="hidden sm:flex gap-3">
-            {images.map((src, i) => (
-              <button
-                key={src + i}
-                onClick={() => goTo(i)}
-                className={`relative h-20 w-16 rounded-2xl overflow-hidden border bg-neutral-100 ${
-                  i === active ? "ring-2 ring-neutral-900" : ""
-                }`}
-                aria-label={`Thumbnail ${i + 1}`}
-              >
-                <Image
-                  src={src}
-                  alt={`${name} thumb ${i + 1}`}
-                  fill
-                  sizes="80px"
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* ====== INFO ====== */}
+      {/* Info */}
       <section className="grid gap-4">
         <div className="grid gap-1">
           <div className="text-[11px] tracking-[0.35em] uppercase text-neutral-500">
@@ -169,83 +182,21 @@ export default function ProductPage() {
           <div className="text-lg text-neutral-900">{moneyEUR(product.price)}</div>
         </div>
 
-        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">
-          {desc}
-        </p>
+        <p className="text-sm sm:text-base text-neutral-700 leading-relaxed">{desc}</p>
 
-        {/* ====== CTA ====== */}
-        {/* ====== CTA ====== */}
-<div className="grid gap-2">
-  {/* Desktop button (normal) */}
-  <div className="hidden sm:block">
-    <button
-      onClick={() => {
-        if (alreadyInCart) {
-          window.location.href = `/${locale}/cart`;
-          return;
-        }
-        cart.add(id);
-        window.location.href = `/${locale}/cart`;
-      }}
-      className="w-full rounded-full bg-neutral-900 text-white px-6 py-3 text-sm font-medium hover:opacity-90"
-    >
-      {alreadyInCart
-        ? locale === "de"
-          ? "Zum Warenkorb"
-          : "Go to cart"
-        : locale === "de"
-        ? "In den Warenkorb"
-        : "Add to cart"}
-    </button>
+        <button
+          onClick={() => {
+            if (!alreadyInCart) cart.add(id);
+            window.location.href = `/${locale}/cart`;
+          }}
+          className="rounded-full bg-neutral-900 text-white px-6 py-3 text-sm font-medium hover:opacity-90"
+        >
+          {alreadyInCart ? "Go to cart" : "Add to cart"}
+        </button>
 
-    <div className="mt-2 text-xs text-neutral-500">
-      {locale === "de"
-        ? "Versand aus Deutschland • DE 4€ (frei ab 55€) • EU 7€ (frei ab 85€)"
-        : "Ships from Germany • DE €4 (free over €55) • EU €7 (free over €85)"}
-    </div>
-  </div>
-
-  {/* Mobile sticky CTA */}
-  <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 border-t bg-white/90 backdrop-blur px-4 py-3">
-    <button
-      onClick={() => {
-        if (alreadyInCart) {
-          window.location.href = `/${locale}/cart`;
-          return;
-        }
-        cart.add(id);
-        window.location.href = `/${locale}/cart`;
-      }}
-      className="w-full rounded-full bg-neutral-900 text-white px-6 py-3 text-sm font-medium hover:opacity-90"
-    >
-      {alreadyInCart
-        ? locale === "de"
-          ? "Zum Warenkorb"
-          : "Go to cart"
-        : locale === "de"
-        ? "In den Warenkorb"
-        : "Add to cart"}
-    </button>
-
-    <div className="mt-2 text-[11px] text-neutral-600">
-      {locale === "de"
-        ? "Versand aus Deutschland • DE 4€ (frei ab 55€) • EU 7€ (frei ab 85€)"
-        : "Ships from Germany • DE €4 (free over €55) • EU €7 (free over €85)"}
-    </div>
-  </div>
-
-  {/* Spacer so content isn't hidden behind sticky bar */}
-  <div className="sm:hidden h-24" />
-</div>
-
-        <div className="pt-2">
-          <Link
-            href={`/${locale}/${product.category}`}
-            className="text-sm text-neutral-700 underline"
-          >
-            {locale === "de" ? "Zurück" : "Back"}
-          </Link>
-        </div>
+        <Link href={`/${locale}/${product.category}`} className="text-sm text-neutral-700 underline">
+          Back
+        </Link>
       </section>
     </div>
   );
